@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:otp_text_field/otp_field_style.dart';
@@ -97,6 +99,7 @@ class _OTPTextFieldState extends State<OTPTextField> {
   late List<TextEditingController?> _textControllers;
 
   late List<String> _pin;
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -127,16 +130,35 @@ class _OTPTextFieldState extends State<OTPTextField> {
     super.dispose();
   }
 
+  void _handleKeyEvent(RawKeyEvent event) {
+    if (event is RawKeyUpEvent &&
+        event.logicalKey == LogicalKeyboardKey.backspace) {
+      // print('Se presionó la tecla de borrar: $_currentIndex');
+      TextEditingController textEditingController =
+          _textControllers[_currentIndex]!;
+
+      if (textEditingController.text.isEmpty) {
+        if (_currentIndex == 0) return;
+        _focusNodes[_currentIndex]!.unfocus();
+        _focusNodes[_currentIndex - 1]!.requestFocus();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: widget.width,
-      child: Row(
-        mainAxisAlignment: widget.textFieldAlignment,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: List.generate(widget.length, (index) {
-          return buildTextField(context, index);
-        }),
+      child: RawKeyboardListener(
+        focusNode: FocusNode(),
+        onKey: _handleKeyEvent,
+        child: Row(
+          mainAxisAlignment: widget.textFieldAlignment,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: List.generate(widget.length, (index) {
+            return buildTextField(context, index);
+          }),
+        ),
       ),
     );
   }
@@ -213,11 +235,13 @@ class _OTPTextFieldState extends State<OTPTextField> {
 
           // Check if the current value at this position is empty
           // If it is move focus to previous text field.
+          /*
           if (str.isEmpty) {
             if (index == 0) return;
             _focusNodes[index]!.unfocus();
             _focusNodes[index - 1]!.requestFocus();
           }
+           */
 
           // Update the current pin
           setState(() {
@@ -253,11 +277,12 @@ class _OTPTextFieldState extends State<OTPTextField> {
     TextEditingController? controller = _textControllers[index];
 
     if (focusNode == null || controller == null) return;
-
+    // log('handleFocusChange : $index tine el foco?: ${focusNode.hasFocus}');
     if (focusNode.hasFocus) {
       controller.selection = TextSelection.fromPosition(
           TextPosition(offset: controller.text.length));
     }
+    _currentIndex = index;
   }
 
   String _getCurrentPin() {
